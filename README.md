@@ -31,17 +31,20 @@ A simple banking application built with Spring Boot that allows users to create 
 ## 📦 Project Structure
 
 ```text
-src
+src/main/java/com/academy/banking_app
+├── BankingAppApplication → Main application class
 ├── controller         → API endpoints
 ├── dto                → Request and response objects
-├── entity             → JPA entities (User, Account)
+├── entity             → JPA entities (User)
 ├── repository         → Spring Data repositories
 ├── service            
 │   ├── impl           → Business logic implementations
 │   ├── UserService    → User service interface
 │   └── EmailService   → Mail service interface
-├── utils              → Utility classes (e.g., AccountUtils)
-└── config             → Mail and DB configs
+└── utils              → Utility classes (e.g., AccountUtils)
+
+src/main/resources 
+└── application.properties → Application configuration
 ```
 
 ---
