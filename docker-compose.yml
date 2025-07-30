@@ -1,0 +1,21 @@
+services:
+  db:
+    container_name: mysql-spring-boot
+    image: mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: banking
+    volumes:
+      - db:/data/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - db
+    restart: unless-stopped
+
+networks:
+  db:
+    driver: bridge
+
+volumes:
+  db:
