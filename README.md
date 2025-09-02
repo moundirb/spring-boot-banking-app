@@ -18,7 +18,7 @@ A simple banking application built with Spring Boot that allows users to create 
 
 ## 🛠️ Tech Stack
 
-- Java 17
+- Java 24
 - Spring Boot
 - Spring Data JPA
 - Lombok
