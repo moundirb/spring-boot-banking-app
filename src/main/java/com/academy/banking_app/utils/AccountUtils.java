@@ -27,7 +27,23 @@ public class AccountUtils {
 
     public static final String ACCOUNT_DELETED_CODE = "005";
     public static final String ACCOUNT_DELETED_MESSAGE = "Account deleted";
-    
+
+    public static final String ACCOUNT_CREDITED_CODE = "007";
+    public static final String ACCOUNT_CREDITED_MESSAGE = "Account credited";
+
+    public static final String ACCOUNT_DEBITED_CODE = "008";
+    public static final String ACCOUNT_DEBITED_MESSAGE = "Account debited";
+
+    public static final String INVALID_AMOUNT_CODE = "009";
+    public static final String INVALID_AMOUNT_MESSAGE = "Invalid amount";
+
+    public static final String  ACCOUNT_INACTIVE_CODE = "010";
+    public static final String ACCOUNT_INACTIVE_MESSAGE = "Account is inactive";
+
+    public static final String INSUFFICIENT_BALANCE_CODE = "011";
+    public static final String INSUFFICIENT_BALANCE_MESSAGE = "Insufficient balance";
+
+
 
 
 

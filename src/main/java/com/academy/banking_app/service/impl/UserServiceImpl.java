@@ -1,19 +1,18 @@
 package com.academy.banking_app.service.impl;
 
-import com.academy.banking_app.dto.AccountInfo;
-import com.academy.banking_app.dto.BankResponse;
-import com.academy.banking_app.dto.EmailDetails;
-import com.academy.banking_app.dto.UserRequest;
+import com.academy.banking_app.dto.*;
+import com.academy.banking_app.entity.Customer;
+import com.academy.banking_app.entity.Merchant;
 import com.academy.banking_app.entity.User;
 import com.academy.banking_app.repository.UserRepository;
 import com.academy.banking_app.service.EmailService;
 import com.academy.banking_app.service.UserService;
 import com.academy.banking_app.utils.AccountUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Optional;
 
 @Service
@@ -64,8 +63,8 @@ public class UserServiceImpl implements UserService {
                             AccountInfo.builder()
                                     .accountBalance(existingUser.getAccountBalance())
                                     .accountNumber(existingUser.getAccountNumber())
-                                    .accountName(existingUser.getFirstname() + " " + existingUser.getLastname() + " " + existingUser.getOthername())
-                                    .build()
+                                    .accountName(getFullName(existingUser))
+                                            .build()
                     )
                     .build();
 
@@ -89,16 +88,7 @@ public class UserServiceImpl implements UserService {
         User savedUser = userRepository.save(newUser);
 
         // Send Email Alert
-        EmailDetails emailDetails = EmailDetails.builder()
-                .recipient(savedUser.getEmail())
-                .subject("Account Created Successfully")
-                .msgBody("Dear " + savedUser.getFirstname() + savedUser.getLastname() + savedUser.getOthername() + "\n\n"+
-                        "Your account has been successfully created with the following details:\n" +
-                        "Account Number: " + savedUser.getAccountNumber() + "\n" +
-                        "Best regards,\n" +
-                        " App Team")
-                .build();
-        emailService.sendEmail(emailDetails);
+        sendEmailAlert(savedUser,null);
 
         return BankResponse.builder()
                 .responseCode(AccountUtils.ACCOUNT_CREATED_CODE)
@@ -108,11 +98,33 @@ public class UserServiceImpl implements UserService {
                         AccountInfo.builder()
                                 .accountBalance(savedUser.getAccountBalance())
                                 .accountNumber(savedUser.getAccountNumber())
-                                .accountName(savedUser.getFirstname() + " " + savedUser.getLastname() + " " + savedUser.getOthername())
+                                .accountName(getFullName(savedUser))
                                 .build())
                 .build();
 
     }
+    // helper method to get full name
+    private String getFullName(User user) {
+        StringBuilder name = new StringBuilder();
+        if (user.getFirstname() != null)  name.append(user.getFirstname());
+        if (user.getLastname() != null)  name.append(" ").append(user.getLastname());
+        if (user.getOthername() != null) name.append(" ").append(user.getOthername());
+        return name.toString();
+    }
+    // Helper method to send email
+private void sendEmailAlert(User user, String sp) {
+    String subject = (sp != null && !sp.isEmpty()) ? sp + " Account Created Successfully" : "Account Created Successfully";
+    EmailDetails emailDetails = EmailDetails.builder()
+            .recipient(user.getEmail())
+            .subject(subject)
+            .msgBody("Dear " + getFullName(user) + ",\n\n" +
+                    "Your account has been successfully created with the following details:\n" +
+                    "Account Number: " + user.getAccountNumber() + "\n" +
+                    "Best regards,\n" +
+                    " App Team")
+            .build();
+    emailService.sendEmail(emailDetails);
+}
 
     // Method to get account information by account number
     @Override
@@ -151,107 +163,33 @@ public class UserServiceImpl implements UserService {
                     .accountInfo(null)
                     .build();
         }
-        User user = getUser(userRequest, userOptional);
 
+        User user = userOptional.get();
+        updateUserDetails(user, userRequest);
         User updatedUser = userRepository.save(user);
 
         return BankResponse.builder()
                 .responseCode(AccountUtils.ACCOUNT_UPDATED_CODE)
                 .responseMessage(AccountUtils.ACCOUNT_UPDATED_MESSAGE)
-                .accountInfo(
-                        AccountInfo.builder()
-                                .accountBalance(updatedUser.getAccountBalance())
-                                .accountNumber(updatedUser.getAccountNumber())
-                                .accountName(updatedUser.getFirstname() + " " + updatedUser.getLastname() + " " + updatedUser.getOthername())
-                                .build()
-                )
+                .accountInfo(AccountInfo.builder()
+                        .accountBalance(updatedUser.getAccountBalance())
+                        .accountNumber(updatedUser.getAccountNumber())
+                        .accountName(getFullName(updatedUser))
+                        .build())
                 .build();
     }
 
-    private static User getUser(UserRequest userRequest, Optional<User> userOptional) {
-        User user = userOptional.get();
-        // Update user details
-        user.setFirstname(userRequest.getFirstname());
-        user.setLastname(userRequest.getLastname());
-        user.setOthername(userRequest.getOthername());
-        user.setGender(userRequest.getGender());
-        user.setAddress(userRequest.getAddress());
-        user.setStateOfOrigin(userRequest.getStateOfOrigin());
-        user.setEmail(userRequest.getEmail());
-        user.setPhoneNumber(userRequest.getPhoneNumber());
-        user.setAlterPhoneNumber(userRequest.getAlterPhoneNumber());
-        return user;
+    private void updateUserDetails(User user, UserRequest userRequest) {
+        if (userRequest.getFirstname() != null) user.setFirstname(userRequest.getFirstname());
+        if (userRequest.getLastname() != null) user.setLastname(userRequest.getLastname());
+        if (userRequest.getOthername() != null) user.setOthername(userRequest.getOthername());
+        if (userRequest.getGender() != null) user.setGender(userRequest.getGender());
+        if (userRequest.getAddress() != null) user.setAddress(userRequest.getAddress());
+        if (userRequest.getStateOfOrigin() != null) user.setStateOfOrigin(userRequest.getStateOfOrigin());
+        if (userRequest.getEmail() != null) user.setEmail(userRequest.getEmail());
+        if (userRequest.getPhoneNumber() != null) user.setPhoneNumber(userRequest.getPhoneNumber());
+        if (userRequest.getAlterPhoneNumber() != null) user.setAlterPhoneNumber(userRequest.getAlterPhoneNumber());
     }
-
-    // Method to update account information Partially
-
-    @Override
-    public BankResponse updatePartialAccount(String accountNumber, UserRequest userRequest) {
-        Optional<User> userOptional = userRepository.findByAccountNumber(accountNumber);
-        if (userOptional.isEmpty()) {
-            return BankResponse.builder()
-                    .responseCode(AccountUtils.ACCOUNT_NOT_FOUND_CODE)
-                    .responseMessage(AccountUtils.ACCOUNT_NOT_FOUND_MESSAGE)
-                    .accountInfo(null)
-                    .build();
-        }
-        User user = userOptional.get();
-        applyPartialUpdate(user, userRequest);
-
-        User updatedUser = userRepository.save(user);
-
-        return BankResponse.builder()
-                .responseCode(AccountUtils.ACCOUNT_UPDATED_CODE)
-                .responseMessage(AccountUtils.ACCOUNT_UPDATED_MESSAGE)
-                .accountInfo(
-                        AccountInfo.builder()
-                                .accountBalance(updatedUser.getAccountBalance())
-                                .accountNumber(updatedUser.getAccountNumber())
-                                .accountName(updatedUser.getFirstname() + " " + updatedUser.getLastname() + " " + updatedUser.getOthername())
-                                .build()
-                )
-                .build();
-    }
-
-        /**
-         * Applies partial updates to the User entity based on the provided UserRequest.
-         *
-         * @param user        The User entity to be updated.
-         * @param userRequest The UserRequest containing the fields to update.
-         */
-        private void applyPartialUpdate(User user, UserRequest userRequest) {
-
-
-            if (userRequest.getFirstname() != null) {
-                user.setFirstname(userRequest.getFirstname());
-            }
-            if (userRequest.getLastname() != null) {
-                user.setLastname(userRequest.getLastname());
-            }
-            if (userRequest.getOthername() != null) {
-                user.setOthername(userRequest.getOthername());
-            }
-            if (userRequest.getEmail() != null) {
-                user.setEmail(userRequest.getEmail());
-            }
-            if (userRequest.getPhoneNumber() != null) {
-                user.setPhoneNumber(userRequest.getPhoneNumber());
-            }
-            if (userRequest.getAlterPhoneNumber() != null) {
-                user.setAlterPhoneNumber(userRequest.getAlterPhoneNumber());
-            }
-            if (userRequest.getGender() != null) {
-                user.setGender(userRequest.getGender());
-            }
-            if (userRequest.getAddress() != null) {
-                user.setAddress(userRequest.getAddress());
-            }
-            if (userRequest.getStateOfOrigin() != null) {
-                user.setStateOfOrigin(userRequest.getStateOfOrigin());
-            }
-
-        }
-
 
     // Method to delete an account by account number
 
@@ -275,4 +213,241 @@ public class UserServiceImpl implements UserService {
                 .build();
 
     }
+// for the customer creation
+
+    @Override
+    public BankResponse createCustomer(CustomerRequest customerRequest) {
+        if (userRepository.existsByEmail(customerRequest.getEmail())) {
+            // Similar logic as before for existing user
+            User existingUser = userRepository.findByEmail(customerRequest.getEmail())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            return BankResponse.builder()
+                    .responseCode(AccountUtils.ACCOUNT_EXISTS_CODE)
+                    .responseMessage(AccountUtils.ACCOUNT_EXISTS_MESSAGE)
+                    .accountInfo(
+                            AccountInfo.builder()
+                                    .accountBalance(existingUser.getAccountBalance())
+                                    .accountNumber(existingUser.getAccountNumber())
+                                    .accountName(getFullName(existingUser))
+                                    .build())
+                    .build();
+        }
+
+        Customer newCustomer = Customer.builder()
+                .firstname(customerRequest.getFirstname())
+                .lastname(customerRequest.getLastname())
+                .othername(customerRequest.getOthername())
+                .address(customerRequest.getAddress())
+                .gender(customerRequest.getGender())
+                .stateOfOrigin(customerRequest.getStateOfOrigin())
+                .accountNumber(AccountUtils.generateAccountNumber())
+                .email(customerRequest.getEmail())
+                .accountBalance(BigDecimal.ZERO)
+                .phoneNumber(customerRequest.getPhoneNumber())
+                .alterPhoneNumber(customerRequest.getAlterPhoneNumber())
+                .customerReferenceNumber(customerRequest.getCustomerReferenceNumber())  // Specific
+                .dateOfBirth(LocalDate.parse(customerRequest.getDateOfBirth()))  // Specific
+                .status("active")
+                .build();
+
+        Customer savedCustomer = (Customer) userRepository.save(newCustomer);  // Cast if needed, but JPA handles
+        // Email logic same as before
+        // Send Email Alert
+        sendEmailAlert(savedCustomer, "Customer");
+
+        return BankResponse.builder()
+                .responseCode(AccountUtils.ACCOUNT_CREATED_CODE)
+                .responseMessage(AccountUtils.ACCOUNT_CREATED_MESSAGE)
+                .accountInfo(
+                        AccountInfo.builder()
+                                .accountBalance(savedCustomer.getAccountBalance())
+                                .accountNumber(savedCustomer.getAccountNumber())
+                                .accountName(savedCustomer.getFirstname() + " " + savedCustomer.getLastname() + " " + savedCustomer.getOthername())
+                                .build())
+                .build();
+    }
+
+    @Override
+    public BankResponse createMerchant(MerchantRequest merchantRequest) {
+        if (userRepository.existsByEmail(merchantRequest.getEmail())) {
+            // Similar logic as before for existing user
+            User existingUser = userRepository.findByEmail(merchantRequest.getEmail())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            return BankResponse.builder()
+                    .responseCode(AccountUtils.ACCOUNT_EXISTS_CODE)
+                    .responseMessage(AccountUtils.ACCOUNT_EXISTS_MESSAGE)
+                    .accountInfo(
+                            AccountInfo.builder()
+                                    .accountBalance(existingUser.getAccountBalance())
+                                    .accountNumber(existingUser.getAccountNumber())
+                                    .accountName(getFullName(existingUser))
+                                    .build())
+                    .build();
+        }
+
+        Merchant newMerchant = Merchant.builder()
+                .firstname(merchantRequest.getFirstname())
+                .lastname(merchantRequest.getLastname())
+                .othername(merchantRequest.getOthername())
+                .address(merchantRequest.getAddress())
+                .gender(merchantRequest.getGender())
+                .stateOfOrigin(merchantRequest.getStateOfOrigin())
+                .accountNumber(AccountUtils.generateAccountNumber())
+                .email(merchantRequest.getEmail())
+                .accountBalance(BigDecimal.ZERO)
+                .phoneNumber(merchantRequest.getPhoneNumber())
+                .alterPhoneNumber(merchantRequest.getAlterPhoneNumber())
+                .businessName(merchantRequest.getBusinessName())  // Specific
+                .businessRegistrationNumber(merchantRequest.getBusinessRegistrationNumber())  // Specific
+                .status("active")
+                .build();
+
+        Merchant savedMerchant = (Merchant) userRepository.save(newMerchant);  // Cast if needed, but JPA handles
+
+        // Email logic same as before
+        // Send Email Alert
+        sendEmailAlert(savedMerchant, "Merchant");
+
+        return BankResponse.builder()
+                .responseCode(AccountUtils.ACCOUNT_CREATED_CODE)
+                .responseMessage(AccountUtils.ACCOUNT_CREATED_MESSAGE)
+                .accountInfo(
+                        AccountInfo.builder()
+                                .accountBalance(savedMerchant.getAccountBalance())
+                                .accountNumber(savedMerchant.getAccountNumber())
+                                .accountName(savedMerchant.getFirstname() + " " + savedMerchant.getLastname() + " " + savedMerchant.getOthername())
+                                .build())
+                .build();
+    }
+
+    @Override
+    public BankResponse balanceEnquiry(EnquiryRequest request) {
+            //check if the provided  account number exists
+        if (!userRepository.existsByAccountNumber(request.getAccountNumber())) {
+            return BankResponse.builder()
+                    .responseCode(AccountUtils.ACCOUNT_NOT_FOUND_CODE)
+                    .responseMessage(AccountUtils.ACCOUNT_NOT_FOUND_MESSAGE)
+                    .accountInfo(null)
+                    .build();
+        }
+        User foundUser = userRepository.findByAccountNumber(request.getAccountNumber())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return BankResponse.builder()
+                .responseCode(AccountUtils.ACCOUNT_FOUND_CODE)
+                .responseMessage(AccountUtils.ACCOUNT_FOUND_MESSAGE)
+                .accountInfo(
+                        AccountInfo.builder()
+                                .accountBalance(foundUser.getAccountBalance())
+                                .accountNumber(foundUser.getAccountNumber())
+                                .accountName(getFullName(foundUser))
+                                .build()
+                )
+                .build();
+
+    }
+
+    @Override
+    public String nameEnquiry(EnquiryRequest request) {
+        //check if the provided  account number exists
+        if (!userRepository.existsByAccountNumber(request.getAccountNumber())) {
+            return AccountUtils.ACCOUNT_NOT_FOUND_MESSAGE;
+        }
+        User foundUser = userRepository.findByAccountNumber(request.getAccountNumber())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return getFullName(foundUser);
+    }
+
+    @Override
+    public BankResponse creditAccount(TransactionRequest request) {
+        if (!userRepository.existsByAccountNumber(request.getAccountNumber())) {
+            return BankResponse.builder()
+                    .responseCode(AccountUtils.ACCOUNT_NOT_FOUND_CODE)
+                    .responseMessage(AccountUtils.ACCOUNT_NOT_FOUND_MESSAGE)
+                    .accountInfo(null)
+                    .build();
+        }
+        User creditedUser = userRepository.findByAccountNumber(request.getAccountNumber())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        // check if the amount is valid
+        if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            return BankResponse.builder()
+                    .responseCode(AccountUtils.INVALID_AMOUNT_CODE)
+                    .responseMessage(AccountUtils.INVALID_AMOUNT_MESSAGE)
+                    .accountInfo(null)
+                    .build();
+        }
+        // check if the account is active
+        if (!creditedUser.getStatus().equalsIgnoreCase("active")) {
+            return BankResponse.builder()
+                    .responseCode(AccountUtils.ACCOUNT_INACTIVE_CODE)
+                    .responseMessage(AccountUtils.ACCOUNT_INACTIVE_MESSAGE)
+                    .accountInfo(null)
+                    .build();
+        }
+        // credit the account
+        creditedUser.setAccountBalance(creditedUser.getAccountBalance().add(request.getAmount()));
+        userRepository.save(creditedUser);
+        return BankResponse.builder()
+                .responseCode(AccountUtils.ACCOUNT_CREDITED_CODE)
+                .responseMessage(AccountUtils.ACCOUNT_CREDITED_MESSAGE)
+                .accountInfo(AccountInfo.builder()
+                        .accountBalance(creditedUser.getAccountBalance())
+                        .accountNumber(creditedUser.getAccountNumber())
+                        .accountName(getFullName(creditedUser))
+                        .build())
+                .build();
+
+    }
+
+    @Override
+    public BankResponse debitAccount(TransactionRequest request) {
+        if (!userRepository.existsByAccountNumber(request.getAccountNumber())) {
+            return BankResponse.builder()
+                    .responseCode(AccountUtils.ACCOUNT_NOT_FOUND_CODE)
+                    .responseMessage(AccountUtils.ACCOUNT_NOT_FOUND_MESSAGE)
+                    .accountInfo(null)
+                    .build();
+        }
+        User debitedUser = userRepository.findByAccountNumber(request.getAccountNumber())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        // check if the amount is valid
+        if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            return BankResponse.builder()
+                    .responseCode(AccountUtils.INVALID_AMOUNT_CODE)
+                    .responseMessage(AccountUtils.INVALID_AMOUNT_MESSAGE)
+                    .accountInfo(null)
+                    .build();
+        }
+        // check if the account is active
+        if (!debitedUser.getStatus().equalsIgnoreCase("active")) {
+            return BankResponse.builder()
+                    .responseCode(AccountUtils.ACCOUNT_INACTIVE_CODE)
+                    .responseMessage(AccountUtils.ACCOUNT_INACTIVE_MESSAGE)
+                    .accountInfo(null)
+                    .build();
+        }
+        // check if the account has sufficient balance
+        if (debitedUser.getAccountBalance().compareTo(request.getAmount()) < 0) {
+            return BankResponse.builder()
+                    .responseCode(AccountUtils.INSUFFICIENT_BALANCE_CODE)
+                    .responseMessage(AccountUtils.INSUFFICIENT_BALANCE_MESSAGE)
+                    .accountInfo(null)
+                    .build();
+        }
+        // debit the account
+        debitedUser.setAccountBalance(debitedUser.getAccountBalance().subtract(request.getAmount()));
+        userRepository.save(debitedUser);
+        return BankResponse.builder()
+                .responseCode(AccountUtils.ACCOUNT_DEBITED_CODE)
+                .responseMessage(AccountUtils.ACCOUNT_DEBITED_MESSAGE)
+                .accountInfo(AccountInfo.builder()
+                        .accountBalance(debitedUser.getAccountBalance())
+                        .accountNumber(debitedUser.getAccountNumber())
+                        .accountName(getFullName(debitedUser))
+                        .build())
+                .build();
+
+    }
+
+    // balance Enquiry name Enquiry , credit, debit, transfer
 }
