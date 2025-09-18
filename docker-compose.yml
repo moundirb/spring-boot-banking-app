@@ -1,21 +1,20 @@
 services:
   db:
-    container_name: mysql-spring-boot
-    image: mysql:latest
+    container_name: banking-postgres
+    image: postgres:latest
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: banking
+      POSTGRES_USER: moundirb
+      POSTGRES_PASSWORD: password  # Added password
+      POSTGRES_DB: banking_db  # Add this to create the database
+
+      PGDATA: /data/postgres
     volumes:
-      - db:/data/mysql
+        - db:/data/postgres
     ports:
-      - "3306:3306"
-    networks:
-      - db
+      - "5332:5432"
+
     restart: unless-stopped
 
-networks:
-  db:
-    driver: bridge
 
 volumes:
-  db:
+    db:

@@ -1,11 +1,8 @@
 package com.academy.banking_app.controller;
 
-import com.academy.banking_app.dto.BankResponse;
-import com.academy.banking_app.dto.UserRequest;
+import com.academy.banking_app.dto.*;
 import com.academy.banking_app.service.UserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,7 +15,7 @@ public class UserController {
 
 
     // Endpoint to create a new user account
-    @PostMapping("/create-account")
+    @PostMapping("/createAccount")
     public BankResponse createAccount(@RequestBody UserRequest userRequest){
         return userService.createAccount(userRequest);
     }
@@ -34,19 +31,40 @@ public class UserController {
     public BankResponse updateAccount(@PathVariable String accountNumber, @RequestBody UserRequest userRequest){
         return userService.updateAccount(accountNumber, userRequest);
     }
-    // update a user account partially
-
-    @PatchMapping("/{accountNumber}")
-    public BankResponse updatePartialAccount(
-            @PathVariable String accountNumber,
-            @RequestBody UserRequest userRequest) {
-        return userService.updatePartialAccount(accountNumber, userRequest);
-    }
     // delete user account
     @DeleteMapping("/{accountNumber}")
     public BankResponse deleteAccount(@PathVariable String accountNumber){
         return userService.deleteAccount(accountNumber);
     }
+    // create customer account
 
+    @PostMapping("/createCustomer")
+    public BankResponse createCustomer(@RequestBody CustomerRequest customerRequest) {
+        return userService.createCustomer(customerRequest);
+    }
+
+    @PostMapping("/createMerchant")
+    public BankResponse createMerchant(@RequestBody MerchantRequest merchantRequest) {
+        return userService.createMerchant(merchantRequest);
+    }
+
+// Existing endpoints can handle updates/deletes by accountNumber, as they load User (which could be subclass)
+
+    @GetMapping("/balanceEnquiry")
+    public BankResponse balanceEnquiry(@RequestBody EnquiryRequest request) {
+        return userService.balanceEnquiry(request);
+    }
+    @GetMapping("/nameEnquiry")
+    public String nameEnquiry(@RequestBody EnquiryRequest request) {
+        return userService.nameEnquiry(request);
+    }
+    @PostMapping("/creditAccount")
+    public BankResponse creditAccount(@RequestBody TransactionRequest request) {
+        return userService.creditAccount(request);
+    }
+    @PostMapping("/debitAccount")
+    public BankResponse debitAccount(@RequestBody TransactionRequest request) {
+        return userService.debitAccount(request);
+    }
 
 }
